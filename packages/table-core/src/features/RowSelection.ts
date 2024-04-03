@@ -490,6 +490,48 @@ export const RowSelection: TableFeature = {
           table
         )
 
+        // manage parent row's selection
+        function mutateParentRowIsSelect(
+          selectedRowIds: Record<string, boolean>,
+          row: Row<TData>,
+          value: boolean,
+          includeChildren: boolean
+        ) {
+          const parentRow = row.getParentRow()
+          if (
+            parentRow &&
+            parentRow.getCanSelect() &&
+            parentRow.getCanSelectSubRows() &&
+            includeChildren
+          ) {
+            let parentSelected = true
+            for (let subRow of parentRow.subRows) {
+              if (!selectedRowIds[subRow.id]) {
+                parentSelected = false
+                break
+              }
+            }
+            if (parentSelected) {
+              selectedRowIds[parentRow.id] = true
+            } else {
+              delete selectedRowIds[parentRow.id]
+            }
+            mutateParentRowIsSelect(
+              selectedRowIds,
+              parentRow,
+              value,
+              includeChildren
+            )
+          }
+        }
+
+        mutateParentRowIsSelect(
+          selectedRowIds,
+          row,
+          value,
+          opts?.selectChildren ?? true
+        )
+
         return selectedRowIds
       })
     }
