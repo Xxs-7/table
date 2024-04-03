@@ -490,41 +490,6 @@ export const RowSelection: TableFeature = {
           table
         )
 
-        // manage parent row's selection
-        function mutateParentRowIsSelect(
-          selectedRowIds: Record<string, boolean>,
-          row: Row<TData>,
-          value: boolean,
-          includeChildren: boolean
-        ) {
-          const parentRow = row.getParentRow()
-          if (
-            parentRow &&
-            parentRow.getCanSelect() &&
-            parentRow.getCanSelectSubRows() &&
-            includeChildren
-          ) {
-            let parentSelected = true
-            for (let subRow of parentRow.subRows) {
-              if (!selectedRowIds[subRow.id]) {
-                parentSelected = false
-                break
-              }
-            }
-            if (parentSelected) {
-              selectedRowIds[parentRow.id] = true
-            } else {
-              delete selectedRowIds[parentRow.id]
-            }
-            mutateParentRowIsSelect(
-              selectedRowIds,
-              parentRow,
-              value,
-              includeChildren
-            )
-          }
-        }
-
         mutateParentRowIsSelect(
           selectedRowIds,
           row,
@@ -617,6 +582,36 @@ const mutateRowIsSelected = <TData extends RowData>(
     row.subRows.forEach(row =>
       mutateRowIsSelected(selectedRowIds, row.id, value, includeChildren, table)
     )
+  }
+}
+
+// manage parent row's selection
+const mutateParentRowIsSelect = <TData extends RowData>(
+  selectedRowIds: Record<string, boolean>,
+  row: Row<TData>,
+  value: boolean,
+  includeChildren: boolean
+) => {
+  const parentRow = row.getParentRow()
+  if (
+    parentRow &&
+    parentRow.getCanSelect() &&
+    parentRow.getCanSelectSubRows() &&
+    includeChildren
+  ) {
+    let parentSelected = true
+    for (let subRow of parentRow.subRows) {
+      if (!selectedRowIds[subRow.id]) {
+        parentSelected = false
+        break
+      }
+    }
+    if (parentSelected) {
+      selectedRowIds[parentRow.id] = true
+    } else {
+      delete selectedRowIds[parentRow.id]
+    }
+    mutateParentRowIsSelect(selectedRowIds, parentRow, value, includeChildren)
   }
 }
 
