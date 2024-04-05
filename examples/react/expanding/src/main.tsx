@@ -19,6 +19,10 @@ import { makeData, Person } from './makeData'
 
 function App() {
   const rerender = React.useReducer(() => ({}), {})[1]
+  const [currentSelect, setCurrentSelect] = React.useState({
+    id: '',
+    selected: false,
+  })
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
@@ -56,9 +60,18 @@ function App() {
             <div>
               <IndeterminateCheckbox
                 {...{
+                  // still use `getIsSelected` rather than `getIsAllSubRowsSelected`
+                  // Once a row is selected in the table, I need the state of the RowSelection to contain its id,
+                  // which is different from header
                   checked: row.getIsSelected(),
                   indeterminate: row.getIsSomeSelected(),
-                  onChange: row.getToggleSelectedHandler(),
+                  onChange: (e: unknown) => {
+                    const value = ((e as MouseEvent).target as HTMLInputElement)
+                      ?.checked
+
+                    setCurrentSelect({ id: row.id, selected: value })
+                    row.toggleSelected(value)
+                  },
                 }}
               />{' '}
               {row.getCanExpand() ? (
@@ -132,6 +145,40 @@ function App() {
     debugTable: true,
   })
 
+  React.useEffect(() => {
+    if (currentSelect.id) {
+      const currentRow = table.getRow(currentSelect.id)
+      table.setRowSelection(old => {
+        const selectedRowIds = { ...old }
+        let parentRow = currentRow.getParentRow()
+
+        // do the selection pop behavior
+        // use loop collect change of parent selection rather than recursion for optimize performance
+        while (
+          parentRow &&
+          parentRow.getCanSelect() &&
+          parentRow.getCanSelectSubRows()
+        ) {
+          let parentSelected = true
+          for (let subRow of parentRow.subRows) {
+            if (!selectedRowIds[subRow.id]) {
+              parentSelected = false
+              break
+            }
+          }
+          if (parentSelected) {
+            selectedRowIds[parentRow.id] = true
+          } else {
+            delete selectedRowIds[parentRow.id]
+          }
+          parentRow = parentRow.getParentRow()
+        }
+
+        return selectedRowIds
+      })
+    }
+  }, [currentSelect, table])
+  
   return (
     <div className="p-2">
       <div className="h-2" />
